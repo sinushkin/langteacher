@@ -13,10 +13,11 @@
 # read-only at `docker run` time instead, same as the Claude credentials:
 #
 #   docker build -t langteacher:latest .
-#   docker run -d --name langteacher --hostname "$(hostname)" \
+#   docker run -d --name langteacher --hostname "$(hostname)" --gpus all \
 #     -v ~/.claude:/home/user/.claude:ro \
 #     -v /home/user/data/python-envs/langteacher:/home/user/data/python-envs/langteacher:ro \
 #     -v /home/user/.pyenv/versions/3.13.9:/home/user/.pyenv/versions/3.13.9:ro \
+#     -v /home/user/.cache/whisper:/home/user/.cache/whisper:ro \
 #     -e SOCKS5_PROXY=host:port \
 #     --device /dev/snd --group-add 29 \
 #     -v /run/user/1000/pipewire-0:/run/user/1000/pipewire-0 -e XDG_RUNTIME_DIR=/run/user/1000 \
@@ -37,6 +38,15 @@
 #   won't match any entry in the mounted Xauthority file, and pynput fails
 #   with "Authorization required, but no authorization protocol specified"
 #   even though the socket and file are both mounted correctly.
+# - the whisper cache mount: faster-whisper runs with HF_HUB_OFFLINE=1 (see
+#   entrypoint.sh) and expects the model already snapshotted at
+#   ~/.cache/whisper; without the mount it dies with
+#   huggingface_hub.errors.LocalEntryNotFoundError instead of downloading it.
+# - --gpus all: needed for both faster-whisper and any torch use to see the
+#   GPU at all (docker's default runtime doesn't expose it). Separately, the
+#   "compute type inferred ... float16, but ... do not support efficient
+#   float16" warning from ctranslate2 is expected on this host's P106-100
+#   (Pascal, no fast fp16) -- not a passthrough problem, ignore it.
 #
 # OmniVoice is intentionally not included (dropped -- too heavy for the GPU
 # it has to run on); the image ships Piper (TTS_ENGINE=piper) instead.
