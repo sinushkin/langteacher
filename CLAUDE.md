@@ -73,3 +73,45 @@ See `HOWTO.md` for how to run it (native and Docker) — read that first.
   card, no fast fp16), so ctranslate2's "compute type inferred ... float16,
   but ... do not support efficient float16" warning is expected and not a
   passthrough bug.
+
+## What's actually in the container vs. bind-mounted from the host
+
+The image (~267MB) is just Debian trixie-slim + apt packages + the
+LangTeacher source + the compiled Rust proxy. Everything else the app
+needs is a host bind-mount at `docker run` time, not part of the image:
+
+1. `~/.claude` — Claude Code credentials
+2. `~/.local/share/claude` + `~/.local/bin` — the `claude` CLI binary itself
+3. `/home/user/data/python-envs/langteacher` — the venv (torch/ctranslate2/
+   faster-whisper/piper-tts, ~9.2GB)
+4. `/home/user/.pyenv/versions/3.13.9` — the interpreter the venv symlinks to
+5. `~/.cache/whisper` — the STT model weights
+6. `/dev/snd` + `--group-add 29` (audio gid) — sound hardware
+7. `/run/user/1000/pipewire-0` — the host's PipeWire socket
+8. `/tmp/.X11-unix` + `DISPLAY` + `XAUTHORITY` + `--hostname` — X11, for
+   pynput's global Right-Shift hotkey
+9. `--gpus all` — GPU passthrough
+10. `SOCKS5_PROXY` — this host's local outbound proxy address
+
+**This means the container is not portable as-is** (e.g. to a Windows/WSL
+box): items 2-5 are just files on this specific machine's disk that would
+have to be rebuilt from scratch elsewhere (install Claude Code + log in,
+`pip install` the whole venv again, redownload the whisper model), and
+items 6-8 assume this host's audio/X11 stack (PipeWire + Xwayland) --
+WSLg exposes audio/X11 through entirely different socket paths and would
+need the `docker run` flags reworked, not just copied. Only the image
+itself (and, as plain files, the venv/whisper-cache dirs) would carry over
+directly, and only to another Linux/amd64 host.
+
+**Plan (once the new disk is attached):** bake everything into the image
+except item 1 (`~/.claude` credentials, which should never be baked into
+an image) -- i.e. `COPY` the venv and whisper cache in at build time
+instead of bind-mounting them, so the image is self-contained modulo
+auth. The reason this wasn't done originally (a `COPY` of the venv via an
+additional build context OOM'd this host, and there wasn't enough spare
+disk) should no longer apply with the new disk -- but re-check available
+RAM/disk before that build regardless. Items 2 and 4 (the `claude` CLI
+binary and the pyenv interpreter) can likely be baked in too, since
+they're not credentials, just binaries -- only item 1 is inherently
+per-host. Items 6-9 (audio/X11/GPU) stay runtime flags no matter what;
+those are host-integration points, not something an image can carry.
