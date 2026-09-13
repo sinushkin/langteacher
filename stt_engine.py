@@ -223,11 +223,17 @@ def stop_button_handle():
 
 # noinspection PyBroadException
 def _select_compute_backend():
-    """Return ("cuda", "float16") if a CUDA GPU is available via ctranslate2, else ("cpu", "int8")."""
+    """Return ("cuda", <best supported compute type>) if a CUDA GPU is available
+    via ctranslate2, else ("cpu", "int8"). Older GPUs (e.g. Pascal) lack
+    efficient float16, so the compute type is picked from what the device
+    actually supports rather than assumed."""
     try:
         import ctranslate2
         if ctranslate2.get_cuda_device_count() > 0:
-            return "cuda", "float16"
+            supported = ctranslate2.get_supported_compute_types("cuda", device_index=0)
+            for preferred in ("float16", "bfloat16", "int8_float16", "int8_bfloat16", "int8_float32", "float32", "int8"):
+                if preferred in supported:
+                    return "cuda", preferred
     except Exception:
         pass
     return "cpu", "int8"

@@ -104,7 +104,8 @@ def _resolve_engine(requested):
 
 # Generation parameters
 # NUM_STEP = 32
-NUM_STEP = 16
+# NUM_STEP = 16
+NUM_STEP = 4
 GUIDANCE_SCALE = 2.0
 SPEED = 1.0
 DENOISE = True

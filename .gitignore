@@ -12,6 +12,7 @@ knowledge_base/*
 whisper-base-hungarian_v1/
 piper_voices/*
 !piper_voices/put_piper_voices_here.txt
+omnivoice-model/
 
 # Voice samples for cloning, upload only the default ones
 samples/*

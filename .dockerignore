@@ -1,0 +1,26 @@
+.git
+logs/
+claude-llama-proxy/target/
+claude-llama-proxy/logs/
+
+# Model weights: OmniVoice was dropped, and Piper voices/whisper weights are
+# fetched separately -- see HOWTO.md.
+omnivoice-model/
+whisper-base-hungarian_v1/
+
+# Copyrighted course material -- never bake this into an image.
+books/
+knowledge_base/
+
+# Personal, per-user or per-machine data -- not app source.
+transcripts/
+custom_goals/
+samples/
+config*.ini
+archive/
+
+__pycache__/
+*.pyc
+.idea/
+.DS_Store
+*.save
