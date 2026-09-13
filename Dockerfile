@@ -87,7 +87,12 @@ COPY --chown=user:user --from=proxy-builder /build/target/release/claude-llama-p
      claude-llama-proxy/target/release/claude-llama-proxy
 COPY entrypoint.sh /entrypoint.sh
 COPY tutor.sh /usr/local/bin/tutor
-RUN chmod +x /entrypoint.sh /usr/local/bin/tutor claude-llama-proxy/target/release/claude-llama-proxy
+# `WORKDIR` created /home/user/langteacher as root before the COPYs above;
+# --chown on COPY only covers what it copies in, not that pre-existing
+# directory itself, so `user` couldn't otherwise mkdir logs/transcripts/etc.
+# at runtime.
+RUN chown user:user /home/user/langteacher \
+    && chmod +x /entrypoint.sh /usr/local/bin/tutor claude-llama-proxy/target/release/claude-llama-proxy
 
 USER user
 ENV HOME=/home/user
