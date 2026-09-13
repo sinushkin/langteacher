@@ -15,6 +15,8 @@
 #   docker build -t langteacher:latest .
 #   docker run -d --name langteacher --hostname "$(hostname)" --gpus all \
 #     -v ~/.claude:/home/user/.claude:ro \
+#     -v /home/user/.local/share/claude:/home/user/.local/share/claude:ro \
+#     -v /home/user/.local/bin:/home/user/.local/bin:ro \
 #     -v /home/user/data/python-envs/langteacher:/home/user/data/python-envs/langteacher:ro \
 #     -v /home/user/.pyenv/versions/3.13.9:/home/user/.pyenv/versions/3.13.9:ro \
 #     -v /home/user/.cache/whisper:/home/user/.cache/whisper:ro \
@@ -38,6 +40,12 @@
 #   won't match any entry in the mounted Xauthority file, and pynput fails
 #   with "Authorization required, but no authorization protocol specified"
 #   even though the socket and file are both mounted correctly.
+# - the claude CLI mounts: claude-llama-proxy execs the `claude` binary
+#   itself, not a library -- it's not in this image (and shouldn't be baked
+#   in, it's tied to the host's own Claude Code install/credentials), so its
+#   install dir and the ~/.local/bin symlink to it both need mounting in.
+#   It's a self-contained native binary (glibc-only deps), so this just
+#   works as long as both stages are Debian-based like the host.
 # - the whisper cache mount: faster-whisper runs with HF_HUB_OFFLINE=1 (see
 #   entrypoint.sh) and expects the model already snapshotted at
 #   ~/.cache/whisper; without the mount it dies with

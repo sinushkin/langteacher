@@ -58,3 +58,18 @@ See `HOWTO.md` for how to run it (native and Docker) — read that first.
   from `tutor.sh`) redoes the venv/env setup that `entrypoint.sh` only
   exported into PID 1's own shell, which a fresh `docker exec` doesn't
   inherit.
+- **The `claude` CLI itself isn't in the image.** `claude-llama-proxy` execs
+  the `claude` binary directly; it's a self-contained native binary (glibc
+  deps only, no Node.js needed) living at
+  `~/.local/share/claude/versions/<ver>`, symlinked from `~/.local/bin/claude`
+  — both need mounting into the container (see `Dockerfile`'s `docker run`
+  example). It's tied to the host's own Claude Code install and credentials,
+  so it's mounted rather than baked in, same reasoning as the venv.
+- **faster-whisper needs its HF cache mounted too** (`~/.cache/whisper`) —
+  `HF_HUB_OFFLINE=1` (set for the Claude backend's own sake) makes it refuse
+  to download the model on a cache miss instead of falling back online.
+- **GPU needs `--gpus all`** at `docker run`, or torch/ctranslate2 silently
+  run on CPU. Separately: this host's GPU is a P106-100 (Pascal mining
+  card, no fast fp16), so ctranslate2's "compute type inferred ... float16,
+  but ... do not support efficient float16" warning is expected and not a
+  passthrough bug.
